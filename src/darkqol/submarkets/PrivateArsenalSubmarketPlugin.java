@@ -6,6 +6,10 @@ import java.util.List;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.econ.Industry;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
+import com.fs.starfarer.api.combat.ShipHullSpecAPI;
+import com.fs.starfarer.api.combat.ShipVariantAPI;
+import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.fleet.FleetMemberType;
 import com.fs.starfarer.api.loading.FighterWingSpecAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
@@ -17,9 +21,10 @@ import darkqol.utils.ReverseEngSettings;
 
 /**
  * The Private Arsenal is now an output of the Reverse Engineering Hub: it only
- * stocks weapons and fighter wings the hub has actually reverse-engineered here,
- * gated by the hub's current tier (T1 weapons, T2+ also fighters). Items merely
- * unlocked elsewhere (a blueprint found in the world) do not appear.
+ * stocks weapons, fighter wings and ships the hub has actually reverse-engineered
+ * here, gated by the hub's current tier (T1 weapons, T2+ also fighters, T3+ also
+ * ships). Items merely unlocked elsewhere (a blueprint found in the world) do not
+ * appear.
  */
 public class PrivateArsenalSubmarketPlugin extends DarkBaseSubmarketPlugin {
 
@@ -39,10 +44,16 @@ public class PrivateArsenalSubmarketPlugin extends DarkBaseSubmarketPlugin {
 
     public void refreshMarketStock() {
         getCargo().clear();
+        if (getCargo().getMothballedShips() != null) {
+            getCargo().getMothballedShips().clear();
+        }
         int tier = getHubTier();
         addProducedWeapons(); // tier 1+
         if (tier >= 2) {
             addProducedFighters(); // tier 2+
+        }
+        if (tier >= 3) {
+            addProducedShips(); // tier 3+
         }
         getCargo().sort();
     }
@@ -115,6 +126,40 @@ public class PrivateArsenalSubmarketPlugin extends DarkBaseSubmarketPlugin {
         }
     }
 
+    private void addProducedShips() {
+        List<String> ids = new ArrayList<String>(
+                AbstractReverseEngineeringIndustry.getProducedSet(Ids.PRODUCED_SHIPS_MEMORY));
+        for (String hullId : ids) {
+            try {
+                FleetMemberAPI member = createMothballMember(hullId);
+                if (member != null) {
+                    getCargo().getMothballedShips().addFleetMember(member);
+                }
+            } catch (Throwable t) {
+                // stale / removed hull id -> skip
+            }
+        }
+    }
+
+    /** Build an empty-variant mothballed member for a reverse-engineered hull. */
+    private FleetMemberAPI createMothballMember(String hullId) {
+        String hullVariantId = hullId + "_Hull";
+        ShipVariantAPI variant;
+        if (Global.getSettings().doesVariantExist(hullVariantId)) {
+            variant = Global.getSettings().getVariant(hullVariantId);
+        } else {
+            ShipHullSpecAPI hull = Global.getSettings().getHullSpec(hullId);
+            if (hull == null) {
+                return null;
+            }
+            variant = Global.getSettings().createEmptyVariant(hullVariantId, hull);
+        }
+        if (variant == null) {
+            return null;
+        }
+        return Global.getFactory().createFleetMember(FleetMemberType.SHIP, variant);
+    }
+
     @Override
     public boolean isParticipatesInEconomy() {
         return false; // Ce marché ne fait pas partie de l'économie globale
@@ -139,7 +184,7 @@ public class PrivateArsenalSubmarketPlugin extends DarkBaseSubmarketPlugin {
     protected void createTooltipAfterDescription(TooltipMakerAPI tooltip, boolean expanded) {
         super.createTooltipAfterDescription(tooltip, expanded);
         tooltip.addPara(
-                "Stocks every weapon and fighter wing your Reverse Engineering Hub has reverse-engineered. Prices scale with the AI core assigned to the hub (an Omega core makes everything free). Selling items is not allowed.",
+                "Stocks every weapon, fighter wing and ship your Reverse Engineering Hub has reverse-engineered. Prices scale with the AI core assigned to the hub (an Omega core makes everything free). Selling items is not allowed.",
                 10f);
     }
 

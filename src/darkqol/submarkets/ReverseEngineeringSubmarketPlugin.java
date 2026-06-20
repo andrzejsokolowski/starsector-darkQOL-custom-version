@@ -5,9 +5,12 @@ import com.fs.starfarer.api.campaign.CoreUIAPI;
 import com.fs.starfarer.api.campaign.SubmarketPlugin;
 import com.fs.starfarer.api.campaign.econ.SubmarketAPI;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.loading.FighterWingSpecAPI;
+import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
 
 import darkqol.ids.Ids;
+import darkqol.industries.reverseEngineering.AbstractReverseEngineeringIndustry;
 import darkqol.utils.DarkBaseSubmarketPlugin;
 
 public class ReverseEngineeringSubmarketPlugin extends DarkBaseSubmarketPlugin {
@@ -101,6 +104,10 @@ public class ReverseEngineeringSubmarketPlugin extends DarkBaseSubmarketPlugin {
 
     @Override
     public String getIllegalTransferText(FleetMemberAPI member, TransferAction action) {
+        if (action == TransferAction.PLAYER_SELL && alreadyReverseEngineered(member)) {
+            return "Already reverse-engineered - available in the Private Arsenal.";
+        }
+
         if (market.hasIndustry(Ids.REVERSE_ENG_1_IND) || market.hasIndustry(Ids.REVERSE_ENG_2_IND)
                 || market.hasIndustry(Ids.REVERSE_ENG_3_IND)) {
 
@@ -116,6 +123,10 @@ public class ReverseEngineeringSubmarketPlugin extends DarkBaseSubmarketPlugin {
 
     @Override
     public String getIllegalTransferText(CargoStackAPI stack, SubmarketPlugin.TransferAction action) {
+        if (action == TransferAction.PLAYER_SELL && alreadyReverseEngineered(stack)) {
+            return "Already reverse-engineered - available in the Private Arsenal.";
+        }
+
         if (market.hasIndustry(Ids.REVERSE_ENG_1_IND) || market.hasIndustry(Ids.REVERSE_ENG_2_IND)
                 || market.hasIndustry(Ids.REVERSE_ENG_3_IND)) {
 
@@ -138,6 +149,11 @@ public class ReverseEngineeringSubmarketPlugin extends DarkBaseSubmarketPlugin {
         if (market.hasIndustry(Ids.REVERSE_ENG_1_IND) || market.hasIndustry(Ids.REVERSE_ENG_2_IND)
                 || market.hasIndustry(Ids.REVERSE_ENG_3_IND)) {
 
+            // Refuse re-depositing anything the hub has already reverse-engineered.
+            if (action == TransferAction.PLAYER_SELL && alreadyReverseEngineered(stack)) {
+                return true;
+            }
+
             if (market.hasIndustry(Ids.REVERSE_ENG_1_IND)) {
                 if (!stack.isWeaponStack()) {
                     return true;
@@ -155,9 +171,35 @@ public class ReverseEngineeringSubmarketPlugin extends DarkBaseSubmarketPlugin {
     @Override
     public boolean isIllegalOnSubmarket(FleetMemberAPI member, SubmarketPlugin.TransferAction action) {
         if (market.hasIndustry(Ids.REVERSE_ENG_3_IND)) {
-            return false;
+            // Refuse re-depositing a ship the hub has already reverse-engineered.
+            return action == TransferAction.PLAYER_SELL && alreadyReverseEngineered(member);
         }
         return true;
+    }
+
+    /**
+     * True when this stack's weapon/fighter has already been reverse-engineered
+     * here (and is therefore stocked in the Private Arsenal). Other items are
+     * handled by the tier checks.
+     */
+    private boolean alreadyReverseEngineered(CargoStackAPI stack) {
+        if (stack.isWeaponStack()) {
+            WeaponSpecAPI spec = stack.getWeaponSpecIfWeapon();
+            return spec != null && AbstractReverseEngineeringIndustry
+                    .getProducedSet(Ids.PRODUCED_WEAPONS_MEMORY).contains(spec.getWeaponId());
+        }
+        if (stack.isFighterWingStack()) {
+            FighterWingSpecAPI spec = stack.getFighterWingSpecIfWing();
+            return spec != null && AbstractReverseEngineeringIndustry
+                    .getProducedSet(Ids.PRODUCED_FIGHTERS_MEMORY).contains(spec.getId());
+        }
+        return false;
+    }
+
+    /** True when this ship's hull has already been reverse-engineered here. */
+    private boolean alreadyReverseEngineered(FleetMemberAPI member) {
+        return member != null && AbstractReverseEngineeringIndustry
+                .getProducedSet(Ids.PRODUCED_SHIPS_MEMORY).contains(member.getHullId());
     }
 
     @Override

@@ -5,7 +5,7 @@ dark_re_days_beta,Research days - beta core,Int,15,1,1000,Days to reverse-engine
 dark_re_days_alpha,Research days - alpha core,Int,5,1,1000,Days to reverse-engineer one item with an alpha core assigned.,Reverse Engineering
 dark_re_days_omega,Research days - omega core,Int,2,1,1000,Days to reverse-engineer one item with an omega core assigned.,Reverse Engineering
 dark_re_drone_day_reduction,Drone Replicator day reduction,Int,1,0,100,Flat days removed from research time while a Combat Drone Replicator is installed in the hub.,Reverse Engineering
-dark_re_improve_blueprint_copies,Improve blueprint copies,Int,2,1,10,Number of blueprint copies produced per item while the hub is improved (1 otherwise).,Reverse Engineering
+dark_re_improve_blueprint_copies,Improve blueprint copies,Int,1,1,10,Blueprint copies an improved hub also produces per item. Un-improved hubs produce no blueprint and only stock the Private Arsenal.,Reverse Engineering
 dark_re_price_mult_no_core,Arsenal price x - no core,Double,2.0,0,20,Arsenal price multiplier vs base item value with no AI core assigned.,Reverse Engineering
 dark_re_price_mult_gamma,Arsenal price x - gamma core,Double,1.6,0,20,Arsenal price multiplier vs base item value with a gamma core assigned.,Reverse Engineering
 dark_re_price_mult_beta,Arsenal price x - beta core,Double,1.0,0,20,Arsenal price multiplier vs base item value with a beta core assigned.,Reverse Engineering

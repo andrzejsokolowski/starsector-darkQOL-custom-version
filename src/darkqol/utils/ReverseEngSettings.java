@@ -108,7 +108,7 @@ public class ReverseEngSettings {
     }
 
     public static int improveBlueprintCopies() {
-        return getInt("dark_re_improve_blueprint_copies", 2);
+        return getInt("dark_re_improve_blueprint_copies", 1);
     }
 
     // --- Arsenal price multipliers (vs base item value, by assigned core) ---

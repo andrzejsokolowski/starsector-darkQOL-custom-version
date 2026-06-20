@@ -23,11 +23,13 @@ import darkqol.utils.SaveOneData;
 
 /**
  * Drives one item-type's reverse-engineering loop: pull an item out of the
- * storage submarket, work it for a number of days, then produce its blueprint.
+ * storage submarket, work it for a number of days, then finish it.
  *
- * One finished item = one blueprint (two copies when the hub is improved). The
- * finished id is also registered in the produced-set so the integrated Private
- * Arsenal can stock it. AI cores only shorten the time.
+ * Every finished item is registered in the produced-set so the integrated
+ * Private Arsenal can stock it. The actual blueprint is only produced when the
+ * hub is improved (the story-point improvement "also produces a blueprint").
+ * Items already in the produced-set are never re-scanned. AI cores only shorten
+ * the time.
  */
 public abstract class AbstractReverseEngineeringIndustry<T> extends AbstractSubmarketIndustry {
     public static final Logger log = Global.getLogger(AbstractReverseEngineeringIndustry.class);
@@ -151,11 +153,17 @@ public abstract class AbstractReverseEngineeringIndustry<T> extends AbstractSubm
         String id = getIdReverse();
         debugLog("Reverse engineering of " + getNameReverse() + " completed.");
 
-        int copies = isImproved() ? Math.max(1, ReverseEngSettings.improveBlueprintCopies()) : 1;
-        boolean made = generateBlueprint(id, copies);
-        if (made) {
-            registerProduced(id);
+        // Every finished item is unlocked in the integrated Private Arsenal.
+        registerProduced(id);
+
+        // The story-point improvement additionally produces the actual blueprint in storage.
+        int copies = 0;
+        boolean made = false;
+        if (isImproved()) {
+            copies = Math.max(1, ReverseEngSettings.improveBlueprintCopies());
+            made = generateBlueprint(id, copies);
         }
+
         notifyDeconstructionCompletion(copies, made);
         resetDeconstructionVariables();
     }
@@ -172,16 +180,21 @@ public abstract class AbstractReverseEngineeringIndustry<T> extends AbstractSubm
                 new String[] { getNameReverse() },
                 Misc.getHighlightColor());
 
-        if (made) {
-            intel.addLine(
-                    BaseIntelPlugin.BULLET
-                            + "A blueprint was added to storage (x%s) and the item is now stocked in the Private Arsenal.",
-                    Misc.getHighlightColor(),
-                    new String[] { String.valueOf(copies) });
-        } else {
-            intel.addLine(BaseIntelPlugin.BULLET + "No storage was available to receive the blueprint.",
-                    Misc.getNegativeHighlightColor(),
-                    new String[] {});
+        // Always unlocked in the arsenal; the blueprint itself is the improvement's bonus.
+        intel.addLine(BaseIntelPlugin.BULLET + "The item is now stocked in the Private Arsenal.",
+                Misc.getHighlightColor(),
+                new String[] {});
+
+        if (isImproved()) {
+            if (made) {
+                intel.addLine(BaseIntelPlugin.BULLET + "A blueprint was also added to storage (x%s).",
+                        Misc.getHighlightColor(),
+                        new String[] { String.valueOf(copies) });
+            } else {
+                intel.addLine(BaseIntelPlugin.BULLET + "No storage was available to receive the blueprint.",
+                        Misc.getNegativeHighlightColor(),
+                        new String[] {});
+            }
         }
 
         intel.setIcon(Global.getSettings().getSpriteName("DarkQOL", "notif"));

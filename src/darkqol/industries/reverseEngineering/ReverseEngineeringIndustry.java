@@ -58,7 +58,7 @@ public class ReverseEngineeringIndustry extends MultiTierIndustry {
 
     @Override
     public String getDescriptionOverride() {
-        String toReturn = "A high-tech facility dedicated to analyzing and reproducing advanced technology through reverse engineering. By deconstructing recovered items, it allows for the creation of blueprints to expand your faction's capabilities.\n\nPlace items into the storage to reverse engineer them. Each finished item produces its blueprint and unlocks it in the integrated Private Arsenal submarket, where you can buy copies.\n\nResearch speed and Arsenal prices both depend on the assigned AI core (an Omega core makes the Arsenal free). Improving the hub produces extra blueprint copies, and installing a Combat Drone Replicator colony item speeds up research.";
+        String toReturn = "A high-tech facility dedicated to analyzing and reproducing advanced technology through reverse engineering. By deconstructing recovered items, it allows you to expand your faction's capabilities.\n\nPlace items into the storage to reverse engineer them. Each finished item is unlocked in the integrated Private Arsenal submarket, where you can buy copies. Items already reverse-engineered here are refused by the storage.\n\nResearch speed and Arsenal prices both depend on the assigned AI core (an Omega core makes the Arsenal free). Improving the hub also produces the item's actual blueprint in storage, and installing a Combat Drone Replicator colony item speeds up research.";
 
         toReturn += "\n\n";
         if (isTier(1)) {
@@ -119,8 +119,10 @@ public class ReverseEngineeringIndustry extends MultiTierIndustry {
     @Override
     public void addImproveDesc(TooltipMakerAPI info, ImprovementDescriptionMode mode) {
         float opad = 10f;
-        info.addPara("Produces %s blueprint copies per reverse-engineered item.", 0f, Misc.getHighlightColor(),
-                "" + ReverseEngSettings.improveBlueprintCopies());
+        int copies = Math.max(1, ReverseEngSettings.improveBlueprintCopies());
+        String copiesText = copies > 1 ? (copies + " copies of its blueprint") : "its blueprint";
+        info.addPara("Each reverse-engineered item also produces %s in storage. Un-improved hubs only stock the "
+                + "Private Arsenal.", 0f, Misc.getHighlightColor(), copiesText);
         info.addSpacer(opad);
         super.addImproveDesc(info, mode);
     }
@@ -212,11 +214,16 @@ class ReverseEngineeringShipIndustry extends AbstractReverseEngineeringIndustry<
         }
 
         Set<String> unlockedShips = Global.getSector().getPlayerFaction().getKnownShips();
+        Set<String> produced = getProducedSet(producedSetKey);
         List<FleetMemberAPI> availableShips = new ArrayList<>();
         List<FleetMemberAPI> allInCargoShips = new ArrayList<>();
 
         for (FleetMemberAPI ship : ships) {
             String shipHullId = ship.getHullId();
+            // Never re-scan something already reverse-engineered (it's in the Private Arsenal).
+            if (produced.contains(shipHullId)) {
+                continue;
+            }
             if (!unlockedShips.contains(shipHullId)) {
                 availableShips.add(ship);
             }
@@ -328,11 +335,16 @@ class ReverseEngineeringWeaponIndustry extends AbstractReverseEngineeringIndustr
         }
 
         Set<String> unlockedWeapons = Global.getSector().getPlayerFaction().getKnownWeapons();
+        Set<String> produced = getProducedSet(producedSetKey);
         List<String> availableWeapons = new ArrayList<>();
         List<String> allInCargoWeapons = new ArrayList<>();
 
         for (CargoAPI.CargoItemQuantity<String> weaponItem : weaponItems) {
             String weaponId = weaponItem.getItem();
+            // Never re-scan something already reverse-engineered (it's in the Private Arsenal).
+            if (produced.contains(weaponId)) {
+                continue;
+            }
             if (!unlockedWeapons.contains(weaponId)) {
                 availableWeapons.add(weaponId);
             }
@@ -410,11 +422,16 @@ class ReverseEngineeringFighterWingIndustry extends AbstractReverseEngineeringIn
         }
 
         Set<String> unlockedFighter = Global.getSector().getPlayerFaction().getKnownFighters();
+        Set<String> produced = getProducedSet(producedSetKey);
         List<String> availableFighter = new ArrayList<>();
         List<String> allInCargoFighter = new ArrayList<>();
 
         for (CargoAPI.CargoItemQuantity<String> fighterWingItem : fighterWingItems) {
             String fighterWingId = fighterWingItem.getItem();
+            // Never re-scan something already reverse-engineered (it's in the Private Arsenal).
+            if (produced.contains(fighterWingId)) {
+                continue;
+            }
             if (!unlockedFighter.contains(fighterWingId)) {
                 availableFighter.add(fighterWingId);
             }
